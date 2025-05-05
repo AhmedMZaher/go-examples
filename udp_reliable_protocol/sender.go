@@ -10,8 +10,9 @@ import (
 	"strings"
 	"time"
 )
-func main(){
-	
+
+func main() {
+
 	remoteAddr, err := net.ResolveUDPAddr("udp", "localhost:12345")
 	if err != nil {
 		fmt.Println("Error resolving address: ", err)
@@ -26,42 +27,43 @@ func main(){
 
 	messages := []string{
 		"0|hello",
-		"1|from",
 		"2|zaher",
+		"1|from",
 	}
-	
+
 	ackChan := make(chan string)
 	go listenAck(conn, ackChan)
-	
+
 	timeout := 2 * time.Second
 
 	for i, msg := range messages {
+		time.Sleep(3 * time.Second)
 		for {
 			fmt.Printf("Sending packet #%d...\n", i)
 			conn.Write([]byte(msg))
 
-			select{
-				case ack := <- ackChan:
-					if ack == fmt.Sprintf("ACK:%d", i) {
-						fmt.Printf("ACK received for #%d\n", i)
-						break
-					}
-				case <-time.After(timeout):
-					fmt.Printf("Timeout on packet #%d, retrying...\n", i)
-                	continue
+			select {
+			case ack := <-ackChan:
+				if ack == fmt.Sprintf("ACK:%d", i) {
+					fmt.Printf("ACK received for #%d\n", i)
+					break
+				}
+			case <-time.After(timeout):
+				fmt.Printf("Timeout on packet #%d, retrying...\n", i)
+				continue
 			}
 			break
 		}
 	}
 }
 
-func listenAck(conn *net.UDPConn, ch chan string){
+func listenAck(conn *net.UDPConn, ch chan string) {
 	buf := make([]byte, 1024)
-	for{
+	for {
 		n, _, err := conn.ReadFromUDP(buf)
 		if err == nil {
 			ack := string(buf[:n])
-			if strings.HasPrefix(ack, "ACK:"){
+			if strings.HasPrefix(ack, "ACK:") {
 				ch <- ack
 			}
 		}
